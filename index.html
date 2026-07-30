@@ -1,1 +1,167 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Geocache Chess Puzzle</title>
+  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      text-align: center;
+      background-color: #f8f9fa;
+      color: #212529;
+      padding: 20px;
+      margin: 0;
+    }
+    .container {
+      max-width: 480px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    h2 {
+      margin-top: 0;
+      color: #1a252c;
+    }
+    #board {
+      width: 100%;
+      max-width: 400px;
+      margin: 20px auto;
+      border-radius: 6px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    /* Warm wooden square styling */
+    .white-1e1d7 { background-color: #f0d9b5 !important; }
+    .black-3c85d { background-color: #b58863 !important; }
+
+    .status-box {
+      font-size: 1.05em;
+      font-weight: 600;
+      margin-top: 15px;
+      min-height: 24px;
+    }
+    #coords {
+      display: none;
+      margin-top: 20px;
+      padding: 16px;
+      background-color: #e6f4ea;
+      color: #137333;
+      border: 1px solid #ceead6;
+      border-radius: 8px;
+      font-size: 1.25em;
+      line-height: 1.5;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 0.95em;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 6px;
+      border: 1px solid #dadce0;
+      background: #ffffff;
+      color: #3c4043;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #f1f3f4;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h2>Chess Tactics Geocache</h2>
+    <p>Find White's winning line (Mate in 3) to unlock the final coordinates.</p>
+
+    <div id="board"></div>
+    <button onclick="resetPuzzle()">Reset Board</button>
+
+    <div id="status" class="status-box">White to move.</div>
+    
+    <div id="coords">
+      🎉 <strong>Checkmate!</strong><br>
+      Final Coordinates:<br>
+      <strong>N 38° 57.468 W 104° 48.622</strong>
+    </div>
+  </div>
+
+  <script>
+    const startFen = 'r7/3bb1kp/q4p1N/1pnPp1np/2p4Q/2P5/1PB3P1/2B2RK1 w - - 1 0';
+    
+    const correctMoves = [
+      { from: 'h4', to: 'g5' }, // 1. Qxg5+
+      { from: 'f6', to: 'g5' }, // 1... fxg5
+      { from: 'f1', to: 'f7' }, // 2. Rf7+
+      { from: 'g7', to: 'h6' }, // 2... Kxh6
+      { from: 'f7', to: 'h7' }  // 3. Rxh7#
+    ];
+
+    let game = new Chess(startFen);
+    let board = null;
+    let stepIndex = 0;
+
+    function onDragStart(source, piece) {
+      if (game.game_over() || stepIndex >= correctMoves.length || piece.search(/^b/) !== -1) {
+        return false;
+      }
+    }
+
+    function onDrop(source, target) {
+      const expected = correctMoves[stepIndex];
+      if (source !== expected.from || target !== expected.to) {
+        $('#status').text('Incorrect move! Try again.').css('color', '#d93025');
+        return 'snapback';
+      }
+
+      game.move({ from: source, to: target, promotion: 'q' });
+      stepIndex++;
+
+      if (stepIndex >= correctMoves.length) {
+        $('#status').text('');
+        $('#coords').fadeIn();
+        return;
+      }
+
+      $('#status').text('Correct! Opponent is responding...').css('color', '#188038');
+      setTimeout(makeBlackMove, 400);
+    }
+
+    function makeBlackMove() {
+      const blackMove = correctMoves[stepIndex];
+      game.move({ from: blackMove.from, to: blackMove.to, promotion: 'q' });
+      board.position(game.fen());
+      stepIndex++;
+      $('#status').text('Your turn!').css('color', '#212529');
+    }
+
+    function resetPuzzle() {
+      game = new Chess(startFen);
+      board.position(startFen);
+      stepIndex = 0;
+      $('#status').text('White to move.').css('color', '#212529');
+      $('#coords').hide();
+    }
+
+    board = Chessboard('board', {
+      draggable: true,
+      position: startFen,
+      // Solid white high-definition Staunton piece set
+      pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
+      onDragStart: onDragStart,
+      onDrop: onDrop,
+      onSnapEnd: () => board.position(game.fen())
+    });
+  </script>
+</body>
+</html>
